@@ -2,8 +2,8 @@ const presence = new Presence({
 		clientId: "810203651317432351",
 	}),
 	strings = presence.getStrings({
-		play: "presence.playback.playing",
-		pause: "presence.playback.paused",
+		play: "general.playing",
+		pause: "general.paused",
 	}),
 	browsingTimestamp = Math.floor(Date.now() / 1000);
 
@@ -35,7 +35,8 @@ presence.on(
 
 presence.on("UpdateData", async () => {
 	const presenceData: PresenceData = {
-		largeImageKey: "genoanime",
+		largeImageKey:
+			"https://cdn.rcd.gg/PreMiD/websites/G/Genoanime/assets/logo.png",
 		startTimestamp: browsingTimestamp,
 	}; //title of the page
 	if (document.location.pathname === "/")
@@ -85,23 +86,22 @@ presence.on("UpdateData", async () => {
 			},
 		];
 		if (iFrameVideo) {
-			[, presenceData.endTimestamp] = presence.getTimestamps(
-				Math.floor(currentTime),
-				Math.floor(duration)
-			);
+			[presenceData.startTimestamp, presenceData.endTimestamp] =
+				presence.getTimestamps(Math.floor(currentTime), Math.floor(duration));
 		} else {
 			video = document.querySelector("div > div.plyr__video-wrapper > video");
 			if (video) {
 				({ currentTime, duration, paused } = video),
-					([, presenceData.endTimestamp] = presence.getTimestamps(
-						Math.floor(currentTime),
-						Math.floor(duration)
-					));
+					([presenceData.startTimestamp, presenceData.endTimestamp] =
+						presence.getTimestamps(
+							Math.floor(currentTime),
+							Math.floor(duration)
+						));
 			}
 		}
 
 		if (!isNaN(duration)) {
-			presenceData.smallImageKey = paused ? "pause" : "play";
+			presenceData.smallImageKey = paused ? Assets.Pause : Assets.Play;
 			presenceData.smallImageText = paused
 				? (await strings).pause
 				: (await strings).play;

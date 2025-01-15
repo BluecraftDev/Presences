@@ -5,7 +5,8 @@ const presence = new Presence({
 
 presence.on("UpdateData", async () => {
 	const presenceData: PresenceData = {
-			largeImageKey: "crowdin",
+			largeImageKey:
+				"https://cdn.rcd.gg/PreMiD/websites/C/Crowdin/assets/logo.png",
 			startTimestamp: browsingTimestamp,
 		},
 		{ pathname, host, href } = document.location,
@@ -40,7 +41,7 @@ presence.on("UpdateData", async () => {
 							: c.textContent
 					)
 					.join(" ");
-				presenceData.smallImageKey = "reading";
+				presenceData.smallImageKey = Assets.Reading;
 				if (activeLabel) {
 					presenceData.buttons = [
 						{
@@ -54,13 +55,13 @@ presence.on("UpdateData", async () => {
 				presenceData.state = document.querySelector<HTMLInputElement>(
 					".form-control.form-control__result.input-lg"
 				)?.value;
-				presenceData.smallImageKey = "search";
+				presenceData.smallImageKey = Assets.Search;
 			} else {
 				presenceData.details = `Reading ${
 					isEnterprise ? "an Enterprise" : "a"
 				} support article`;
 				presenceData.state = document.querySelector(".hero")?.textContent;
-				presenceData.smallImageKey = "reading";
+				presenceData.smallImageKey = Assets.Reading;
 				presenceData.buttons = [
 					{
 						label: "View article",
@@ -116,7 +117,7 @@ presence.on("UpdateData", async () => {
 			break;
 		}
 		case "blog.crowdin.com": {
-			presenceData.smallImageKey = "reading";
+			presenceData.smallImageKey = Assets.Reading;
 			if (pathname === "/") presenceData.details = "Browsing the blog";
 			else if (pathname.includes("/tag/")) {
 				presenceData.details = "Viewing tag";
@@ -133,7 +134,7 @@ presence.on("UpdateData", async () => {
 				presenceData.details = "Searching the blog";
 				presenceData.state =
 					document.querySelector<HTMLInputElement>(".form-control")?.value;
-				presenceData.smallImageKey = "search";
+				presenceData.smallImageKey = Assets.Search;
 			} else if (document.querySelector(".hero > h1")) {
 				presenceData.details = "Reading blog post";
 				presenceData.state = document.querySelector(".hero > h1").textContent;
@@ -158,11 +159,11 @@ presence.on("UpdateData", async () => {
 				else {
 					if (showProject) {
 						presenceData.details =
-							document.querySelector(".project-name__title__text")
+							document.querySelector("a.side-menu__link--active > span")
 								?.textContent ??
 							document.querySelector<HTMLAnchorElement>(
-								"#wrap > div.section.project-page > div > div.clearfix.mb-2 > div > div:nth-child(2) > a"
-							).outerText;
+								"#back-end-header .application__header__breadcrumb a:nth-child(3)"
+							).textContent;
 						presenceData.buttons = [
 							{
 								label: "View project",
@@ -221,7 +222,7 @@ presence.on("UpdateData", async () => {
 						presenceData.state = "Viewing project home";
 					else if (
 						document.querySelector(
-							"#wrap > div.section.project-page > div > h1"
+							".language-container .breadcrumb-item > span"
 						)
 					) {
 						presenceData.state = `${await getLanguageName(
@@ -258,8 +259,12 @@ presence.on("UpdateData", async () => {
 						} else if (pathname.includes("/settings"))
 							presenceData.state = "Managing project settings";
 					}
-					if (!presenceData.details && presenceData.state) {
-						const stateSplit = presenceData.state.split(" ");
+					if (
+						!presenceData.details &&
+						presenceData.state &&
+						!(presenceData.state as string).split(" ").includes("translation")
+					) {
+						const stateSplit = (presenceData.state as string).split(" ");
 						if (!stateSplit.includes("project"))
 							stateSplit.splice(1, 0, "a project's");
 						else stateSplit[stateSplit.indexOf("project")] = "a project's";
@@ -287,7 +292,7 @@ presence.on("UpdateData", async () => {
 						.split("-")[1]
 						?.trim()} - ${languageName}`;
 				} else presenceData.state = languageName;
-				presenceData.smallImageKey = "writing";
+				presenceData.smallImageKey = Assets.Writing;
 				presenceData.buttons = [
 					{
 						label: "Translate project",
@@ -350,7 +355,7 @@ presence.on("UpdateData", async () => {
 					presenceData.state = `${subject} - ${participants}`;
 				} else presenceData.details = "Messaging a group";
 
-				presenceData.smallImageKey = "writing";
+				presenceData.smallImageKey = Assets.Writing;
 			} else if (pathname.includes("/projects")) {
 				const searchValue = document.querySelector<HTMLInputElement>(
 					"#search_query > input"
@@ -362,7 +367,7 @@ presence.on("UpdateData", async () => {
 
 				if (searchValue) {
 					presenceData.state += ` - ${searchValue}`;
-					presenceData.smallImageKey = "search";
+					presenceData.smallImageKey = Assets.Search;
 				}
 			} else if (pathname.includes("/resources")) {
 				presenceData.details = "Viewing resources";
@@ -373,7 +378,7 @@ presence.on("UpdateData", async () => {
 				presenceData.state = document.querySelector<HTMLAnchorElement>(
 					".selected-release-item"
 				)?.textContent;
-				presenceData.smallImageKey = "reading";
+				presenceData.smallImageKey = Assets.Reading;
 				presenceData.buttons = [
 					{
 						label: "View release notes",
@@ -388,7 +393,7 @@ presence.on("UpdateData", async () => {
 				presenceData.details = "Reading page";
 				// The header of each page is inconsistent and sometimes too big, thus we use the document title
 				presenceData.state = document.title.split("|")[0];
-				presenceData.smallImageKey = "reading";
+				presenceData.smallImageKey = Assets.Reading;
 				presenceData.buttons = [
 					{
 						label: "View page",

@@ -4,7 +4,6 @@ const presence = new Presence({
 	getStrings = async () => {
 		return presence.getStrings(
 			{
-				play: "general.playing",
 				pause: "general.paused",
 				browse: "general.browsing",
 				search: "general.searchSomething",
@@ -112,14 +111,25 @@ const statics = {
 
 presence.on("UpdateData", async () => {
 	const path = location.pathname.replace(/\/?$/, "/"),
-		[showBrowsing, showSong, showTimestamps, cover, newLang] =
-			await Promise.all([
-				presence.getSetting<boolean>("browse"),
-				presence.getSetting<boolean>("song"),
-				presence.getSetting<boolean>("timestamp"),
-				presence.getSetting<boolean>("cover"),
-				presence.getSetting<string>("lang").catch(() => "en"),
-			]),
+		[
+			showBrowsing,
+			showSong,
+			hidePaused,
+			showTimestamps,
+			showCover,
+			showButtons,
+			usePresenceName,
+			newLang,
+		] = await Promise.all([
+			presence.getSetting<boolean>("browse"),
+			presence.getSetting<boolean>("song"),
+			presence.getSetting<boolean>("hidePaused"),
+			presence.getSetting<boolean>("timestamp"),
+			presence.getSetting<boolean>("cover"),
+			presence.getSetting<boolean>("buttons"),
+			presence.getSetting<boolean>("usePresenceName"),
+			presence.getSetting<string>("lang").catch(() => "en"),
+		]),
 		playing = Boolean(document.querySelector(".playControls__play.playing"));
 
 	if (oldLang !== newLang || !strings) {
@@ -127,8 +137,13 @@ presence.on("UpdateData", async () => {
 		strings = await getStrings();
 	}
 
+	if (showSong && hidePaused && !playing && !showBrowsing)
+		return presence.clearActivity();
+
 	let presenceData: PresenceData = {
-		largeImageKey: "soundcloud",
+		type: ActivityType.Listening,
+		largeImageKey:
+			"https://cdn.rcd.gg/PreMiD/websites/S/SoundCloud/assets/logo.png",
 		startTimestamp: elapsed,
 	};
 
@@ -138,10 +153,17 @@ presence.on("UpdateData", async () => {
 	}
 
 	if ((playing || (!playing && !showBrowsing)) && showSong) {
-		presenceData.details = getElement(
-			".playbackSoundBadge__titleLink > span:nth-child(2)"
-		);
-		presenceData.state = getElement(".playbackSoundBadge__lightLink");
+		if (!usePresenceName) {
+			presenceData.details = getElement(
+				".playbackSoundBadge__titleLink > span:nth-child(2)"
+			);
+			presenceData.state = getElement(".playbackSoundBadge__lightLink");
+		} else {
+			presenceData.name = getElement(
+				".playbackSoundBadge__titleLink > span:nth-child(2)"
+			);
+			presenceData.details = getElement(".playbackSoundBadge__lightLink");
+		}
 
 		const timePassed = document.querySelector(
 				"div.playbackTimeline__timePassed > span:nth-child(2)"
@@ -162,20 +184,21 @@ presence.on("UpdateData", async () => {
 					}
 				})(),
 			],
-			[startTimestamp, endTimestamp] = presence.getTimestamps(
-				currentTime,
-				duration
-			),
 			pathLinkSong = document
 				.querySelector(
 					"#app > div.playControls.g-z-index-control-bar.m-visible > section > div > div.playControls__elements > div.playControls__soundBadge > div > div.playbackSoundBadge__titleContextContainer > div > a"
 				)
-				.getAttribute("href");
+				?.getAttribute("href");
 
-		presenceData.startTimestamp = startTimestamp;
-		presenceData.endTimestamp = endTimestamp;
+		if (playing) {
+			[presenceData.startTimestamp, presenceData.endTimestamp] =
+				presence.getTimestamps(currentTime, duration);
+		} else {
+			presenceData.smallImageKey = Assets.Pause;
+			presenceData.smallImageText = strings.pause;
+		}
 
-		if (cover) {
+		if (showCover) {
 			presenceData.largeImageKey =
 				document
 					.querySelector<HTMLSpanElement>(
@@ -184,18 +207,16 @@ presence.on("UpdateData", async () => {
 					.style.backgroundImage.match(/"(.*)"/)?.[1]
 					.replace("-t50x50.jpg", "-t500x500.jpg") ?? "soundcloud";
 		}
-		presenceData.smallImageKey = playing ? "play" : "pause";
-		presenceData.smallImageText = strings[playing ? "play" : "pause"];
 
-		presenceData.buttons = [
-			{
-				label: strings.listen,
-				url: `https://soundcloud.com${pathLinkSong}`,
-			},
-		];
-	}
-
-	if ((!playing || !showSong) && showBrowsing) {
+		if (showButtons && pathLinkSong) {
+			presenceData.buttons = [
+				{
+					label: strings.listen,
+					url: `https://soundcloud.com${pathLinkSong}`,
+				},
+			];
+		}
+	} else if ((!playing || !showSong) && showBrowsing) {
 		for (const [k, v] of Object.entries(statics))
 			if (path.match(k)) presenceData = { ...presenceData, ...v };
 
@@ -257,15 +278,15 @@ presence.on("UpdateData", async () => {
 		}
 	}
 
-	if (presenceData.details) {
+	if (presenceData.details && typeof presenceData.details === "string") {
 		if (presenceData.details.match("(Browsing|Viewing|Discovering)")) {
-			presenceData.smallImageKey = "reading";
+			presenceData.smallImageKey = Assets.Reading;
 			presenceData.smallImageText = strings.browse;
 		} else if (presenceData.details.match("(Searching)")) {
-			presenceData.smallImageKey = "search";
+			presenceData.smallImageKey = Assets.Search;
 			presenceData.smallImageText = strings.search;
 		} else if (presenceData.details.match("(Uploading)")) {
-			presenceData.smallImageKey = "uploading";
+			presenceData.smallImageKey = Assets.Uploading;
 			presenceData.smallImageText = "Uploading..."; // no string available
 		} else if (!showTimestamps || (!playing && !showBrowsing)) {
 			delete presenceData.startTimestamp;
